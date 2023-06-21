@@ -64,6 +64,12 @@ static TL_EvtPacket_t *p_ZIGBEE_request_M0_to_M4;
 static __IO uint32_t CptReceiveNotifyFromM0 = 0;
 static __IO uint32_t CptReceiveRequestFromM0 = 0;
 
+/*ADDITIONAL Private variables -----------------------------------------------*/
+float temp = 0.00;
+char temp_str[10] = "";
+char temp_message[20] = "";
+/*END OF ADDITIONAL Private variables -----------------------------------------------*/
+
 PLACE_IN_SECTION("MB_MEM1") ALIGN(4) static TL_ZIGBEE_Config_t ZigbeeConfigBuffer;
 PLACE_IN_SECTION("MB_MEM2") ALIGN(4) static TL_CmdPacket_t ZigbeeOtCmdBuffer;
 PLACE_IN_SECTION("MB_MEM2") ALIGN(4) static uint8_t ZigbeeNotifRspEvtBuffer[sizeof(TL_PacketHeader_t) + TL_EVT_HDR_SIZE + 255U];
@@ -100,7 +106,7 @@ static enum ZclStatusCodeT messaging_client_msg_cnf_cb(struct ZbZclClusterT *clu
 {
 
   return ZCL_STATUS_SUCCESS;
-  
+
 }
 
 static enum ZclStatusCodeT messaging_client_msg_cancel_cb(struct ZbZclClusterT *clusterPtr, void *arg, struct ZbZclMsgGetMsgCancellationT *req, struct ZbZclAddrInfoT *source)
@@ -129,9 +135,10 @@ static void APP_ZIGBEE_InitMsg(void)
         my_first_message.duration=0x0005;
         /* High priority message */
         my_first_message.message_control=0x08;
-        strcpy(my_first_message.message_str,"Hello");
+        // strcpy(my_first_message.message_str,"Hello");
+        strcpy(my_first_message.message_str,"S1 Temp= 0");
         my_first_message.extended_control=0x00;
-   
+
         my_second_message.message_id=0x01;
         my_second_message.start_time=0x00000100;
         /* Display message for 5 mn */
@@ -173,7 +180,7 @@ static void APP_ZIGBEE_SW1_Process()
   if(zigbee_app_info.zb == NULL){
     return;
   }
-  
+
   /* Check if the router joined the network */
   if (ZbNwkGet(zigbee_app_info.zb, ZB_NWK_NIB_ID_ExtendedPanId, &epid, sizeof(epid)) != ZB_STATUS_SUCCESS) {
     return;
@@ -187,10 +194,18 @@ static void APP_ZIGBEE_SW1_Process()
   dst.endpoint = SW1_ENDPOINT;
   dst.nwkAddr = 0x0000; /* Coordinator */
 
-  APP_DBG("SW1 PUSHED (SENDING HELLO TO CLIENT)");
+  //APP_DBG("SW1 PUSHED (SENDING HELLO TO CLIENT)");
+  APP_DBG("SW1 PUSHED (SENDING TEMP TO CLIENT)");
   if (ZbZclMsgServerDisplayMessageReq(zigbee_app_info.messaging_server_1, &dst, &my_first_message, NULL, NULL) != ZCL_STATUS_SUCCESS) {
     APP_DBG("Error, ZbZclMsgServerDisplayMessageReq failed (SW1_ENDPOINT)");
   }
+}
+
+static void write_sensor_data_to_message()
+{
+  sprintf(temp_message, "S1 temp= %.2f", temp);
+  strcpy(my_first_message.message_str, temp_message);
+  temp++;
 }
 
 static void APP_ZIGBEE_SW2_Process()
@@ -201,7 +216,7 @@ static void APP_ZIGBEE_SW2_Process()
   if(zigbee_app_info.zb == NULL){
     return;
   }
-  
+
   /* Check if the router joined the network */
   if (ZbNwkGet(zigbee_app_info.zb, ZB_NWK_NIB_ID_ExtendedPanId, &epid, sizeof(epid)) != ZB_STATUS_SUCCESS) {
     return;
@@ -248,9 +263,11 @@ void APP_ZIGBEE_Init(void)
 
   /* Task associated with push button SW1 */
   UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW1, UTIL_SEQ_RFU, APP_ZIGBEE_SW1_Process);
-  
+
   /* Task associated with push button SW2 */
-  UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, APP_ZIGBEE_SW2_Process);
+  //UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, APP_ZIGBEE_SW2_Process);
+  UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, write_sensor_data_to_message);
+  /*Added Task responsible for collecting data from sensor*/
 
   /* Start the stack on CPU2 side */
   ZigbeeInitStatus = SHCI_C2_ZIGBEE_Init();
@@ -279,8 +296,8 @@ static void APP_ZIGBEE_StackLayersInit(void)
   APP_ZIGBEE_InitMsg();
 
   /* Initialize Server callbacks */
-  APP_ZIGBEE_InitCallback(&my_msg_client_cmd_cb);  
-  
+  APP_ZIGBEE_InitCallback(&my_msg_client_cmd_cb);
+
   /* Create the endpoint and cluster(s) */
   APP_ZIGBEE_ConfigEndpoints();
 
@@ -320,7 +337,7 @@ static void APP_ZIGBEE_NwkForm(void)
     config.startupControl = ZbStartTypeJoin;
 
     /* Using the default HA preconfigured Link Key */
-    memcpy(config.security.preconfiguredLinkKey, sec_key_ha, ZB_SEC_KEYSIZE);   
+    memcpy(config.security.preconfiguredLinkKey, sec_key_ha, ZB_SEC_KEYSIZE);
     config.channelList.count = 1;
     config.channelList.list[0].page = 0;
     config.channelList.list[0].channelMask = 1 << CHANNEL; /* Channel in use*/
@@ -471,27 +488,27 @@ static void APP_ZIGBEE_CheckWirelessFirmwareInfo(void)
     char *del;
     if ( (strchr(__FILE__, '/')) == NULL)
         {del = strchr(__PathProject__, '\\');}
-    else 
+    else
         {del = strchr(__PathProject__, '/');}
-    
+
         int index = (int) (del - __PathProject__);
         APP_DBG("Application flashed: %*.*s",index,index,__PathProject__);
-    
+
     //print channel
     APP_DBG("Channel used: %d", CHANNEL);
     //print Link Key
     APP_DBG("Link Key: %.16s", sec_key_ha);
-    //print Link Key value hex   
+    //print Link Key value hex
     char Z09_LL_string[ZB_SEC_KEYSIZE*3+1];
     Z09_LL_string[0]=0;
     for(int str_index=0; str_index < ZB_SEC_KEYSIZE; str_index++)
-      {           
+      {
         sprintf(&Z09_LL_string[str_index*3],"%02x ",sec_key_ha[str_index]);
       }
-  
+
     APP_DBG("Link Key value: %s",Z09_LL_string);
     //print clusters allocated
-    APP_DBG("Clusters allocated are:");  
+    APP_DBG("Clusters allocated are:");
     APP_DBG("Messaging Server on Endpoint %d",SW1_ENDPOINT);
     APP_DBG("**********************************************************");
   }
