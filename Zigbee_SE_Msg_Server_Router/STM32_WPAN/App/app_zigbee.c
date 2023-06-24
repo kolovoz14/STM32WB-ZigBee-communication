@@ -32,6 +32,8 @@
 #include "zcl/zcl.h"
 #include "zcl/se/zcl.message.h"
 
+#include <stdlib.h>
+
 /* Private defines -----------------------------------------------------------*/
 #define APP_ZIGBEE_STARTUP_FAIL_DELAY               500U
 #define SW1_ENDPOINT            17
@@ -68,6 +70,16 @@ static __IO uint32_t CptReceiveRequestFromM0 = 0;
 float temp = 0.00;
 char temp_str[10] = "";
 char temp_message[20] = "";
+
+struct sensor_data{
+	uint8_t device_id;
+	uint8_t sensor_id;
+	char value_type; //T-temperature P-preasure O-other
+	float value;
+};
+//init sensor data;
+struct sensor_data temp_sensor={0,0,'T',0.00};
+
 /*END OF ADDITIONAL Private variables -----------------------------------------------*/
 
 PLACE_IN_SECTION("MB_MEM1") ALIGN(4) static TL_ZIGBEE_Config_t ZigbeeConfigBuffer;
@@ -194,8 +206,15 @@ static void APP_ZIGBEE_SW1_Process()
   dst.endpoint = SW1_ENDPOINT;
   dst.nwkAddr = 0x0000; /* Coordinator */
 
+
+  // generate pseudo-random temperature
+  temp_sensor.value=(rand()%5001)/100.0-20.0;
+  //convert sensor data to str.
+  sprintf(temp_message, "%d|%d|%c|%.2f",temp_sensor.device_id,temp_sensor.sensor_id,temp_sensor.value_type,temp_sensor.value);
+  strcpy(my_first_message.message_str, temp_message);
+
   //APP_DBG("SW1 PUSHED (SENDING HELLO TO CLIENT)");
-  APP_DBG("SW1 PUSHED (SENDING TEMP TO CLIENT)");
+  APP_DBG("SW1 PUSHED (SENDING SENSOR DATA TO CLIENT)");
   if (ZbZclMsgServerDisplayMessageReq(zigbee_app_info.messaging_server_1, &dst, &my_first_message, NULL, NULL) != ZCL_STATUS_SUCCESS) {
     APP_DBG("Error, ZbZclMsgServerDisplayMessageReq failed (SW1_ENDPOINT)");
   }
@@ -266,7 +285,7 @@ void APP_ZIGBEE_Init(void)
 
   /* Task associated with push button SW2 */
   //UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, APP_ZIGBEE_SW2_Process);
-  UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, write_sensor_data_to_message);
+  UTIL_SEQ_RegTask(1U << CFG_TASK_BUTTON_SW2, UTIL_SEQ_RFU, APP_ZIGBEE_SW2_Process);
   /*Added Task responsible for collecting data from sensor*/
 
   /* Start the stack on CPU2 side */

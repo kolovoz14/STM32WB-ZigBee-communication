@@ -46,6 +46,8 @@
 #include "hw_conf.h"
 #include "otp.h"
 #include "stm32_seq.h"
+//pseudo-random num.
+#include <stdlib.h>
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef hlpuart1;
@@ -103,8 +105,10 @@ int main(void)
     /* Init the full application */
     APPE_Init();
 
-    /* Infinite loop */
+    //init pseugo-random numbers
+    srand((unsigned)0);
 
+    /* Infinite loop */
     while (1) {
         UTIL_SEQ_Run( UTIL_SEQ_DEFAULT );
 
