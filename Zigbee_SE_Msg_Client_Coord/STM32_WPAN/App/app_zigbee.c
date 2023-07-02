@@ -28,6 +28,8 @@
 #include "zigbee_types.h"
 #include "stm32_seq.h"
 
+#include <string.h>
+
 #include <assert.h>
 #include "zcl/zcl.h"
 #include "zcl/se/zcl.message.h"
@@ -66,6 +68,27 @@ PLACE_IN_SECTION("MB_MEM2") ALIGN(4) static TL_CmdPacket_t ZigbeeOtCmdBuffer;
 PLACE_IN_SECTION("MB_MEM2") ALIGN(4) static uint8_t ZigbeeNotifRspEvtBuffer[sizeof(TL_PacketHeader_t) + TL_EVT_HDR_SIZE + 255U];
 PLACE_IN_SECTION("MB_MEM2") ALIGN(4) static uint8_t ZigbeeNotifRequestBuffer[sizeof(TL_PacketHeader_t) + TL_EVT_HDR_SIZE + 255U];
 
+/*ADDITIONAL Private variables -----------------------------------------------*/
+
+struct sensor_data{
+	uint8_t device_id;
+	uint8_t sensor_id;
+	char value_type; //T-temperature P-preasure O-other
+	float value;
+};
+//init sensor data;
+struct sensor_data temp_sensor={0,0,'O',0.00};
+
+/*END OF ADDITIONAL Private variables -----------------------------------------------*/
+
+/*ADDITIONAL Private function prototypes -----------------------------------------------*/
+
+static void decode_sensor_data_message(char* message_str,struct sensor_data* data);
+static void debug_display_data(struct sensor_data* data);
+
+/*END OF ADDITIONAL Private function prototypes -----------------------------------------------*/
+
+
 struct zigbee_app_info {
   bool has_init;
   struct ZigBeeT *zb;
@@ -90,6 +113,10 @@ static enum ZclStatusCodeT messaging_server_display_message(struct ZbZclClusterT
   strcpy(display_str,msg->message_str);
   APP_DBG(display_str);
 
+  // decode and display message
+  decode_sensor_data_message(msg->message_str, &temp_sensor);
+  debug_display_data(&temp_sensor);
+
   return ZCL_STATUS_SUCCESS;
 
 }
@@ -113,6 +140,30 @@ static enum ZclStatusCodeT messaging_server_display_protected_message(struct ZbZ
 
   return ZCL_STATUS_SUCCESS;
   
+}
+
+void decode_sensor_data_message(char* message_str,struct sensor_data* data)
+{
+	// Extract values and character from message
+	char* token;
+
+	token = strtok(message_str, "|");
+	data->device_id = atoi(token);
+
+	token = strtok(NULL, "|");
+	data->sensor_id = atoi(token);
+
+	token = strtok(NULL, "|");
+	data->value_type = token[0];
+
+	token = strtok(NULL, "|");
+	data->value = atof(token);
+
+}
+
+void debug_display_data(struct sensor_data* data)
+{
+	printf("device_id: %d sensor_id: %d value_type: %c value: %.2f \r\n",data->device_id,data->sensor_id,data->value_type,data->value);
 }
 
 
