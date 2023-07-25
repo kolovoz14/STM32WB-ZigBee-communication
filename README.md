@@ -11,6 +11,7 @@ For a project base, 2 examples provided by STM were used to provide ZigBee commu
 
 - [STM32WB-ZigBee-communication](#stm32wb-zigbee-communication)
   - [Getting Started](#getting-started)
+  - [Project Demo](#project-demo)
   - [Useful resources](#useful-resources)
   - [Author](#author)
 
@@ -26,6 +27,17 @@ To run the projects following steps should be done:
 6. Push SW1 button on server board to send sensor data structure through ZigBee message to client board.
 7. Sensor data message will be printed by client board.
 
+
+## Project Demo
+In a current version of the project sending sensor data is triggered by button press. After launching the project, following results can be expected:
+
+Pressing SW1 button on server board triggers function which encode sensor data and sends it through ZigBee message to client board.
+
+![server router log](./Project_demo/server_router_log.jpg)
+
+Client board receives data, decode it and print it to console.
+
+![client coordinator log](./Project_demo/client_coord_log.jpg)
 
 ## Useful resources
 
