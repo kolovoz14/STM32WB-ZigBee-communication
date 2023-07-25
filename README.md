@@ -12,6 +12,7 @@ For a project base, 2 examples provided by STM were used to provide ZigBee commu
 - [STM32WB-ZigBee-communication](#stm32wb-zigbee-communication)
   - [Getting Started](#getting-started)
   - [Project Demo](#project-demo)
+  - [Planned improvements](#planned-improvements)
   - [Useful resources](#useful-resources)
   - [Author](#author)
 
@@ -38,6 +39,14 @@ Pressing SW1 button on server board triggers function which encode sensor data a
 Client board receives data, decode it and print it to console.
 
 ![client coordinator log](./Project_demo/client_coord_log.jpg)
+
+
+## Planned improvements
+
+- sending sensor data to client periodically (e.g. each 1 second).
+- passing received data from client board further to PC or another board with wifi module, to upload data to cloud
+- handle using multiple sensors from server and client side
+- reading data from real sensors
 
 ## Useful resources
 
